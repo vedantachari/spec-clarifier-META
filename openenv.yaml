@@ -1,0 +1,125 @@
+name: SpecificationClarifier
+version: "1.0.0"
+description: "Real-world environment where AI agents learn to identify and resolve ambiguities in software specifications"
+
+author: "Meta OpenEnv Hackathon"
+license: "MIT"
+source_url: "https://github.com/yourusername/spec-clarifier"
+
+tasks:
+  - id: "easy"
+    name: "Notification System Ambiguities"
+    description: "Identify ambiguities in a simple notification system spec. Single-level ambiguities with 5 key unclear points."
+    difficulty: 1
+    max_steps: 5
+
+  - id: "medium"
+    name: "API Performance & Security"
+    description: "Identify performance and security ambiguities in an order processing API. Multi-faceted with metrics weighting."
+    difficulty: 2
+    max_steps: 6
+
+  - id: "hard"
+    name: "Multi-System Integration"
+    description: "Identify ambiguities and cascade dependencies in payment-inventory-alerts system. Cross-system awareness required."
+    difficulty: 3
+    max_steps: 7
+
+action_space:
+  type: "discrete"
+  action_type: "object"
+  fields:
+    - name: "action_type"
+      type: "string"
+      enum: ["identify_ambiguity", "ask_clarification", "propose_solution"]
+      description: "Type of agent action"
+    - name: "content"
+      type: "string"
+      description: "The agent's message or analysis"
+  description: "Agent proposes actions to clarify ambiguities"
+
+observation_space:
+  type: "object"
+  fields:
+    - name: "specification"
+      type: "string"
+      description: "The current software requirement being analyzed"
+    - name: "task_difficulty"
+      type: "string"
+      enum: ["easy", "medium", "hard"]
+      description: "Current task difficulty level"
+    - name: "iteration"
+      type: "integer"
+      description: "Current iteration count (0-indexed)"
+    - name: "conversation_history"
+      type: "array"
+      description: "List of previous agent actions and grader feedback"
+    - name: "max_iterations"
+      type: "integer"
+      description: "Maximum allowed iterations for this task"
+  description: "Agent observes the spec, difficulty, and conversation history"
+
+reward_space:
+  type: "object"
+  fields:
+    - name: "score"
+      type: "float"
+      range: [0.0, 1.0]
+      description: "Numerical reward score"
+    - name: "reasoning"
+      type: "string"
+      description: "Human-readable explanation of the score"
+    - name: "partial_progress"
+      type: "boolean"
+      description: "Whether this step made incremental progress"
+  description: "Feedback signal based on ambiguity identification quality"
+
+mechanics:
+  episode_structure: "Fixed-length task completion"
+  episode_length: "5-7 steps depending on difficulty"
+  reset_behavior: "Randomly select task difficulty or specify one"
+  termination_condition: "Max iterations reached OR score >= 0.95"
+  partial_credit: true
+  stochasticity: "Deterministic (graders are rule-based, not LLM-based)"
+
+container:
+  image: "python:3.11-slim"
+  build_command: "docker build -t spec-clarifier ."
+  run_command: "docker run -p 7860:7860 spec-clarifier"
+  environment_variables:
+    - name: "OPENAI_API_KEY"
+      description: "OpenAI API key (optional for mock inference)"
+      required: false
+    - name: "MODEL_NAME"
+      description: "Model identifier (default: gpt-3.5-turbo)"
+      required: false
+      default: "gpt-3.5-turbo"
+
+deployment:
+  platform: "huggingface_spaces"
+  tags: ["openenv", "agent-evaluation", "specification-analysis", "real-world"]
+  space_name: "spec-clarifier"
+  interface: "gradio"
+
+requirements:
+  python_version: ">=3.9"
+  packages:
+    - "pydantic>=2.0.0"
+    - "pyyaml>=6.0"
+    - "gradio>=3.0.0"
+
+validation:
+  - "Must pass: openenv validate"
+  - "Docker build must succeed"
+  - "All graders must return scores in [0.0, 1.0]"
+  - "inference.py must be runnable without API key in mock mode"
+
+benchmarks:
+  baseline_easy: 0.71
+  baseline_medium: 0.64
+  baseline_hard: 0.58
+  baseline_average: 0.64
+
+real_world_utility: "Software engineers spend 20-30% of time clarifying requirements. This environment directly addresses that gap."
+problem_novelty: "Most OpenEnv submissions focus on email/code/content tasks. This targets a fundamental engineering workflow rarely automated."
+extensibility: "Methodology applies to legal documents, medical records, policy interpretation, requirements in ANY domain."
